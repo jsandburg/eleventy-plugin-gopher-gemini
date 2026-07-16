@@ -1,0 +1,10 @@
+---
+pagination:
+  data: collections.gopherPosts
+  size: 1
+  alias: post
+permalink: "/gopher{{ post.url }}text"
+eleventyExcludeFromCollections: true
+eleventyAllowMissingExtension: true
+---
+{{ post.rawInput | gopherText | safe }}

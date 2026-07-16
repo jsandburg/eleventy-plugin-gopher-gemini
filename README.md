@@ -14,6 +14,9 @@ the same build as everything else.
 
 ## Install
 
+Requires Eleventy 3.0 or later (this plugin reads `page.rawInput`, added in
+3.0, to get at the raw Markdown source of a page — see below).
+
 ```bash
 npm install github:jsandburg/eleventy-plugin-gopher-gemini
 ```
@@ -25,6 +28,8 @@ import gopherGemini from "eleventy-plugin-gopher-gemini";
 export default function (eleventyConfig) {
   eleventyConfig.addPlugin(gopherGemini, {
     maxLineWidth: 70, // Gopher text wrap width, RFC 1436 default
+    host: "gopher.example.com", // default host for the gopherLink shortcode
+    port: "70", // default port for the gopherLink shortcode
   });
 }
 ```
@@ -69,12 +74,17 @@ you'd rather not repeat the filter inline.
 | Name | Kind | Description |
 |---|---|---|
 | `hasOutput` | filter | `{{ post \| hasOutput("gopher") }}` — true if the page's `outputs` list includes the protocol (or has no `outputs` field at all) |
-| `gemtext` | filter | Converts a Markdown string to Gemtext: headings/blockquotes pass through, inline links become `=> url label` lines |
+| `gemtext` | filter | Converts a Markdown string to Gemtext: headings/blockquotes pass through, inline formatting is unwrapped, inline links become `=> url label` lines |
 | `gopherText` | filter | Converts a Markdown string to plain, word-wrapped Gopher body text; links become `[n]` citations with a numbered list at the end |
 | `gopherLinks` | filter | Returns the `[{ url, label }]` array extracted from a Markdown string, for building gophermap menu lines separately from the body |
 | `gopherItemType` | filter | `{{ "/images/keroppi.gif" \| gopherItemType }}` → `g`/`I`/`9`/`1`/`0`, the Gopher item-type code for a path |
-| `gopherLink` | shortcode | `{% gopherLink "About", "/about", "example.com" %}` — one gophermap menu line, item type auto-detected from the selector |
+| `gopherLink` | shortcode | `{% gopherLink "About", "/about" %}` — one gophermap menu line, item type auto-detected from the selector; host/port default to the plugin's configured `host`/`port` options and can be overridden with `{% gopherLink "About", "/about", "other.host", "70" %}` |
 | `gemLink` | shortcode | `{% gemLink "/about.gmi", "About" %}` — one Gemtext link line |
+
+> **Important:** `gemtext` and `gopherText` parse **Markdown**, not HTML. Pass
+> them the page's raw Markdown source (`page.rawInput`, added in Eleventy
+> 3.0) — never `templateContent` or `content`, which are already
+> Eleventy's own compiled HTML output and will not parse as Markdown.
 
 ## Example templates
 
@@ -88,10 +98,28 @@ pagination:
   size: 1
   alias: post
 permalink: "/gemini{{ post.url }}index.gmi"
+eleventyExcludeFromCollections: true
 ---
 # {{ post.data.title }}
 
-{{ post.templateContent | gemtext | safe }}
+{{ post.rawInput | gemtext | safe }}
+```
+
+A Gopher text page per post (`src/gopher/post.njk`). Gophermap selector
+lines are also extensionless, so `eleventyAllowMissingExtension: true` is
+required or Eleventy will refuse to write the file:
+
+```njk
+---
+pagination:
+  data: collections.gopherPosts
+  size: 1
+  alias: post
+permalink: "/gopher{{ post.url }}text"
+eleventyExcludeFromCollections: true
+eleventyAllowMissingExtension: true
+---
+{{ post.rawInput | gopherText | safe }}
 ```
 
 A gophermap listing posts (`src/gopher/gophermap.njk`):
@@ -100,6 +128,7 @@ A gophermap listing posts (`src/gopher/gophermap.njk`):
 ---
 permalink: "/gopher/gophermap"
 eleventyExcludeFromCollections: true
+eleventyAllowMissingExtension: true
 ---
 {% for post in collections.gopherPosts %}
 {% gopherLink post.data.title, post.url %}
@@ -130,6 +159,17 @@ client fetches it (and displays or downloads it) as a separate request:
 
 There's no thumbnailing, resizing, or inline rendering — that's a limitation
 of the protocols themselves, not this plugin.
+
+## Development
+
+```bash
+npm install
+npm test
+```
+
+The test suite covers the `gemtext`/`gopherText`/`gopherItemType`/`hasOutput`
+conversion logic directly, plus an end-to-end test that runs a real Eleventy
+build against the plugin and inspects the emitted web/Gemini/Gopher output.
 
 ## License
 

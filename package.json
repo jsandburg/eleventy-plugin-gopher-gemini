@@ -11,6 +11,9 @@
     "README.md",
     "LICENSE"
   ],
+  "scripts": {
+    "test": "node --test"
+  },
   "keywords": [
     "eleventy",
     "eleventy-plugin",
@@ -20,8 +23,19 @@
     "gemtext"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jsandburg/eleventy-plugin-gopher-gemini.git"
+  },
+  "homepage": "https://github.com/jsandburg/eleventy-plugin-gopher-gemini#readme",
+  "bugs": {
+    "url": "https://github.com/jsandburg/eleventy-plugin-gopher-gemini/issues"
+  },
   "peerDependencies": {
-    "@11ty/eleventy": ">=2.0.0"
+    "@11ty/eleventy": ">=3.0.0"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.1.6"
   },
   "engines": {
     "node": ">=18"

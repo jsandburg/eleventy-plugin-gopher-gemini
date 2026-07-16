@@ -6,6 +6,8 @@ import { gopherItemType } from "./lib/item-type.js";
 export default function gopherGeminiPlugin(eleventyConfig, options = {}) {
   const config = {
     maxLineWidth: 70,
+    host: "",
+    port: "70",
     ...options,
   };
 
@@ -24,8 +26,9 @@ export default function gopherGeminiPlugin(eleventyConfig, options = {}) {
   // {{ "/images/keroppi.gif" | gopherItemType }} -> "g"
   eleventyConfig.addFilter("gopherItemType", gopherItemType);
 
-  // {% gopherLink "About" "/about" "example.com" %}
-  eleventyConfig.addShortcode("gopherLink", function (description, selector = "", host = "", port = "70") {
+  // {% gopherLink "About" "/about" %} -- host/port default to the plugin's
+  // configured `host`/`port` options, but can be overridden per link
+  eleventyConfig.addShortcode("gopherLink", function (description, selector = "", host = config.host, port = config.port) {
     const type = gopherItemType(selector);
     return `${type}${description}\t${selector}\t${host}\t${port}`;
   });
