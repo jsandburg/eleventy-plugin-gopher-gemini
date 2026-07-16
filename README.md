@@ -17,8 +17,11 @@ the same build as everything else.
 Requires Eleventy 3.0 or later (this plugin reads `page.rawInput`, added in
 3.0, to get at the raw Markdown source of a page — see below).
 
+Pin a released tag rather than tracking `main`, so a future breaking change
+doesn't silently break your build:
+
 ```bash
-npm install github:jsandburg/eleventy-plugin-gopher-gemini
+npm install github:jsandburg/eleventy-plugin-gopher-gemini#v0.1.0
 ```
 
 ```js
