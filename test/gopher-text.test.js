@@ -88,3 +88,33 @@ test("passes non-ASCII text through unchanged", () => {
   const { body } = toGopherText("emoji 🎉 unicode ☃ text");
   assert.equal(body, "emoji 🎉 unicode ☃ text\n");
 });
+
+test("keeps a URL with balanced parentheses intact", () => {
+  const { body, links } = toGopherText("[Gopher](https://en.wikipedia.org/wiki/Gopher_(protocol))");
+  assert.deepEqual(links, [
+    { url: "https://en.wikipedia.org/wiki/Gopher_(protocol)", label: "Gopher" },
+  ]);
+  assert.match(body, /Gopher \[1\]/);
+});
+
+test("hard-breaks a word longer than maxLineWidth so no line exceeds it", () => {
+  const { body } = toGopherText("see https://example.com/a/very/long/path/here ok", { maxLineWidth: 20 });
+  for (const line of body.trim().split("\n")) {
+    assert.ok(line.length <= 20, `line "${line}" exceeds width 20`);
+  }
+});
+
+test("pads a lone '.' line so it cannot be taken for the type-0 terminator", () => {
+  assert.equal(toGopherText("before\n.\nafter").body, "before\n. \nafter\n");
+});
+
+test("strips underscore emphasis but leaves snake_case identifiers alone", () => {
+  assert.equal(toGopherText("_italic_ and __bold__").body, "italic and bold\n");
+  assert.equal(toGopherText("call snake_case_name here").body, "call snake_case_name here\n");
+});
+
+test("does not extract a link written inside an inline code span", () => {
+  const { body, links } = toGopherText("run `curl [x](http://a)` now");
+  assert.equal(links.length, 0);
+  assert.equal(body, "run curl [x](http://a) now\n");
+});

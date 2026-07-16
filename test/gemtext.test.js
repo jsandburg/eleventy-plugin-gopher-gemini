@@ -12,9 +12,22 @@ test("converts inline links to trailing link lines", () => {
   assert.equal(out, "See the docs for more.\n=> https://example.com/docs docs\n");
 });
 
-test("converts image references to link lines", () => {
+test("converts a standalone image reference to a bare link line in place", () => {
   const out = toGemtext("![a gif](/img/keroppi.gif)");
-  assert.equal(out, "a gif\n=> /img/keroppi.gif a gif\n");
+  assert.equal(out, "=> /img/keroppi.gif a gif\n");
+});
+
+test("converts a standalone link line to a bare link line in place", () => {
+  assert.equal(
+    toGemtext("[docs](https://example.com/docs)"),
+    "=> https://example.com/docs docs\n"
+  );
+  assert.equal(toGemtext("[](https://example.com/)"), "=> https://example.com/\n");
+});
+
+test("an image mid-sentence still becomes a trailing link line", () => {
+  const out = toGemtext("see ![a gif](/img/keroppi.gif) here");
+  assert.equal(out, "see a gif here\n=> /img/keroppi.gif a gif\n");
 });
 
 test("passes blockquotes through with a stripped inline link", () => {
@@ -86,4 +99,32 @@ test("passes non-ASCII text through unchanged", () => {
 
 test("a heading with no text after the hashes does not throw", () => {
   assert.equal(toGemtext("# "), "# \n");
+});
+
+test("keeps a URL with balanced parentheses intact", () => {
+  const out = toGemtext("Read [Gopher](https://en.wikipedia.org/wiki/Gopher_(protocol)) sometime.");
+  assert.equal(out, "Read Gopher sometime.\n=> https://en.wikipedia.org/wiki/Gopher_(protocol) Gopher\n");
+});
+
+test("strips underscore emphasis but leaves snake_case identifiers alone", () => {
+  assert.equal(toGemtext("_italic_ and __bold__"), "italic and bold\n");
+  assert.equal(toGemtext("call snake_case_name here"), "call snake_case_name here\n");
+});
+
+test("does not extract a link written inside an inline code span", () => {
+  assert.equal(toGemtext("run `curl [x](http://a)` now"), "run curl [x](http://a) now\n");
+});
+
+test("passes a hand-authored Gemtext link line through verbatim", () => {
+  assert.equal(
+    toGemtext("=> gemini://example.com/ click me"),
+    "=> gemini://example.com/ click me\n"
+  );
+  // Verbatim means no inline stripping either -- underscores in the URL
+  // must survive.
+  assert.equal(toGemtext("=> /a/_b_/c label"), "=> /a/_b_/c label\n");
+});
+
+test("left-trims an indented code fence so clients recognize the toggle", () => {
+  assert.equal(toGemtext("  ```\ncode\n  ```"), "```\ncode\n```\n");
 });

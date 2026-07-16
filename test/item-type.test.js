@@ -33,3 +33,9 @@ test("treats a dotfile's leading dot as having no extension", () => {
 test("uses the last extension of a multi-dot filename", () => {
   assert.equal(gopherItemType("archive.tar.gz"), "9");
 });
+
+test("maps web URLs to the h web-link type", () => {
+  assert.equal(gopherItemType("https://example.com/"), "h");
+  assert.equal(gopherItemType("http://example.com/page.html"), "h");
+  assert.equal(gopherItemType("URL:https://example.com/"), "h");
+});

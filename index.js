@@ -26,16 +26,24 @@ export default function gopherGeminiPlugin(eleventyConfig, options = {}) {
   // {{ "/images/keroppi.gif" | gopherItemType }} -> "g"
   eleventyConfig.addFilter("gopherItemType", gopherItemType);
 
+  // Gophermap fields are tab-delimited and both formats are line-based, so
+  // a tab or newline inside a shortcode argument (e.g. a post title) would
+  // corrupt the menu line or inject extra lines; collapse them to spaces.
+  const sanitize = (value) => String(value).replace(/[\t\r\n]+/g, " ");
+
   // {% gopherLink "About" "/about" %} -- host/port default to the plugin's
   // configured `host`/`port` options, but can be overridden per link
   eleventyConfig.addShortcode("gopherLink", function (description, selector = "", host = config.host, port = config.port) {
-    const type = gopherItemType(selector);
-    return `${type}${description}\t${selector}\t${host}\t${port}`;
+    const cleanSelector = sanitize(selector);
+    const type = gopherItemType(cleanSelector);
+    // Web links use the conventional "hURL:<url>" selector form
+    const target = type === "h" && !/^URL:/i.test(cleanSelector) ? `URL:${cleanSelector}` : cleanSelector;
+    return `${type}${sanitize(description)}\t${target}\t${sanitize(host)}\t${sanitize(port)}`;
   });
 
   // {% gemLink "/about.gmi" "About" %}
   eleventyConfig.addShortcode("gemLink", function (uri, label) {
-    return `=> ${uri}${label ? " " + label : ""}`;
+    return `=> ${sanitize(uri)}${label ? " " + sanitize(label) : ""}`;
   });
 }
 

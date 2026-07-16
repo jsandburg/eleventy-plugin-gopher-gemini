@@ -56,6 +56,9 @@ outputs: [gopher]
 ---
 ```
 
+A bare string (`outputs: gopher`) is treated the same as a one-element list
+(`outputs: [gopher]`).
+
 Use the `hasOutput` filter to build protocol-specific collections in your
 `eleventy.config.js`:
 
@@ -77,11 +80,11 @@ you'd rather not repeat the filter inline.
 | Name | Kind | Description |
 |---|---|---|
 | `hasOutput` | filter | `{{ post \| hasOutput("gopher") }}` — true if the page's `outputs` list includes the protocol (or has no `outputs` field at all) |
-| `gemtext` | filter | Converts a Markdown string to Gemtext: headings/blockquotes pass through, inline formatting is unwrapped, inline links become `=> url label` lines |
+| `gemtext` | filter | Converts a Markdown string to Gemtext: headings/blockquotes pass through, inline formatting is unwrapped, inline links become trailing `=> url label` lines. A line consisting of only a Markdown link becomes a bare `=> url label` line in place, and a hand-authored `=>` line passes through verbatim (note that raw `=>` lines appear as literal text in your web/Gopher output) |
 | `gopherText` | filter | Converts a Markdown string to plain, word-wrapped Gopher body text; links become `[n]` citations with a numbered list at the end |
 | `gopherLinks` | filter | Returns the `[{ url, label }]` array extracted from a Markdown string, for building gophermap menu lines separately from the body |
-| `gopherItemType` | filter | `{{ "/images/keroppi.gif" \| gopherItemType }}` → `g`/`I`/`9`/`1`/`0`, the Gopher item-type code for a path |
-| `gopherLink` | shortcode | `{% gopherLink "About", "/about" %}` — one gophermap menu line, item type auto-detected from the selector; host/port default to the plugin's configured `host`/`port` options and can be overridden with `{% gopherLink "About", "/about", "other.host", "70" %}` |
+| `gopherItemType` | filter | `{{ "/images/keroppi.gif" \| gopherItemType }}` → `g`/`I`/`9`/`h`/`1`/`0`, the Gopher item-type code for a path |
+| `gopherLink` | shortcode | `{% gopherLink "About", "/about" %}` — one gophermap menu line, item type auto-detected from the selector; an `http(s)://` selector becomes a type-`h` `URL:` web link; host/port default to the plugin's configured `host`/`port` options and can be overridden with `{% gopherLink "About", "/about", "other.host", "70" %}`. Tabs and newlines in any argument are collapsed to spaces so a title can't corrupt the menu |
 | `gemLink` | shortcode | `{% gemLink "/about.gmi", "About" %}` — one Gemtext link line |
 
 > **Important:** `gemtext` and `gopherText` parse **Markdown**, not HTML. Pass
@@ -146,8 +149,8 @@ client fetches it (and displays or downloads it) as a separate request:
 
 - `gopherItemType` maps file extensions to the Gopher item-type codes clients
   use to decide how to handle the selector: `g` for GIF, `I` for other raster
-  images, `9` for other binary files, `1` for directories, `0` for plain
-  text.
+  images, `9` for other binary files, `h` for web URLs, `1` for directories,
+  `0` for plain text.
 - `gemtext` and `gopherText` both pull `![alt](path)` image references out of
   the running text and turn them into their own link line (`=> path alt` for
   Gemini, an `[n]` citation for Gopher), the same way a regular link is

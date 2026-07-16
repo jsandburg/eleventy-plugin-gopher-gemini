@@ -32,7 +32,12 @@ test("filterByOutput keeps only items shipping to the given protocol", () => {
   assert.equal(filtered.length, 2);
 });
 
-test("hasOutput fails open (defaults to true) when outputs is malformed, not an array", () => {
+test("hasOutput treats a bare string outputs value as a one-protocol list", () => {
   assert.equal(hasOutput({ data: { outputs: "gopher" } }, "gopher"), true);
-  assert.equal(hasOutput({ data: { outputs: "gopher" } }, "gemini"), true);
+  assert.equal(hasOutput({ data: { outputs: "gopher" } }, "gemini"), false);
+});
+
+test("hasOutput fails open (defaults to true) when outputs is neither a string nor an array", () => {
+  assert.equal(hasOutput({ data: { outputs: 42 } }, "gopher"), true);
+  assert.equal(hasOutput({ data: { outputs: { web: true } } }, "gemini"), true);
 });
