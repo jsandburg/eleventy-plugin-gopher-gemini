@@ -25,3 +25,11 @@ test("defaults to text type 0 for unknown or missing extensions", () => {
 test("strips query strings and fragments before checking the extension", () => {
   assert.equal(gopherItemType("/img/photo.jpg?w=100#frag"), "I");
 });
+
+test("treats a dotfile's leading dot as having no extension", () => {
+  assert.equal(gopherItemType(".gitignore"), "0");
+});
+
+test("uses the last extension of a multi-dot filename", () => {
+  assert.equal(gopherItemType("archive.tar.gz"), "9");
+});

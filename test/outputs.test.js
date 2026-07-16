@@ -31,3 +31,8 @@ test("filterByOutput keeps only items shipping to the given protocol", () => {
   const filtered = filterByOutput(items, "gopher");
   assert.equal(filtered.length, 2);
 });
+
+test("hasOutput fails open (defaults to true) when outputs is malformed, not an array", () => {
+  assert.equal(hasOutput({ data: { outputs: "gopher" } }, "gopher"), true);
+  assert.equal(hasOutput({ data: { outputs: "gopher" } }, "gemini"), true);
+});

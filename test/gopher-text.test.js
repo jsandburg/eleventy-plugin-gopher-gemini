@@ -34,3 +34,57 @@ test("passes fenced code block contents through without the fence markers", () =
   const { body } = toGopherText("```\nconst x = 1;\n```");
   assert.equal(body, "const x = 1;\n");
 });
+
+test("keeps the list-item indent on every wrapped continuation line", () => {
+  const { body } = toGopherText("- a rather long list item text here", { maxLineWidth: 20 });
+  assert.equal(body, "  * a rather long\n  * list item text\n  * here\n");
+  for (const line of body.trim().split("\n")) {
+    assert.ok(line.length <= 20, `line "${line}" exceeds width 20`);
+  }
+});
+
+test("handles empty input without throwing", () => {
+  assert.deepEqual(toGopherText(""), { body: "\n", links: [] });
+  assert.deepEqual(toGopherText(), { body: "\n", links: [] });
+});
+
+test("leaves an unpaired asterisk alone instead of misparsing it as emphasis", () => {
+  assert.equal(toGopherText("5 * 3 = 15").body, "5 * 3 = 15\n");
+});
+
+test("does not hang or throw on an unclosed code fence", () => {
+  assert.equal(toGopherText("```\ncode line").body, "code line\n");
+});
+
+test("does not hang or throw on a degenerate (zero or negative) maxLineWidth", () => {
+  assert.doesNotThrow(() => toGopherText("- a fairly long item", { maxLineWidth: 0 }));
+  assert.doesNotThrow(() => toGopherText("- a fairly long item", { maxLineWidth: -5 }));
+});
+
+test("a heading does not throw on a negative maxLineWidth (String.repeat needs a non-negative count)", () => {
+  assert.doesNotThrow(() => toGopherText("# A Heading", { maxLineWidth: -5 }));
+});
+
+test("normalizes CRLF line endings", () => {
+  assert.equal(toGopherText("one\r\ntwo\r\n").body, "one\ntwo\n");
+});
+
+test("numbers multiple links across a document in order, not per line", () => {
+  const { body, links } = toGopherText("[a](https://a.example)\n\n[b](https://b.example)");
+  assert.match(body, /a \[1\]/);
+  assert.match(body, /b \[2\]/);
+  assert.deepEqual(links, [
+    { url: "https://a.example", label: "a" },
+    { url: "https://b.example", label: "b" },
+  ]);
+});
+
+test("does not flatten a nested list item's own marker", () => {
+  const { body } = toGopherText("- parent\n  - nested");
+  assert.equal(body, "  * parent\n  * nested\n");
+});
+
+test("passes non-ASCII text through unchanged", () => {
+  const { body } = toGopherText("emoji 🎉 unicode ☃ text");
+  assert.equal(body, "emoji 🎉 unicode ☃ text\n");
+});

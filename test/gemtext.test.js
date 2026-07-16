@@ -46,3 +46,44 @@ test("collapses runs of blank lines", () => {
   const out = toGemtext("one\n\n\n\ntwo");
   assert.equal(out, "one\n\ntwo\n");
 });
+
+test("handles empty input without throwing", () => {
+  assert.equal(toGemtext(""), "\n");
+  assert.equal(toGemtext(), "\n");
+});
+
+test("leaves an unpaired asterisk alone instead of misparsing it as emphasis", () => {
+  assert.equal(toGemtext("5 * 3 = 15"), "5 * 3 = 15\n");
+});
+
+test("does not hang or throw on an unclosed code fence", () => {
+  assert.equal(toGemtext("```\ncode line"), "```\ncode line\n");
+});
+
+test("normalizes CRLF line endings", () => {
+  assert.equal(toGemtext("one\r\ntwo\r\n"), "one\ntwo\n");
+});
+
+test("handles multiple links on the same line, in order", () => {
+  const out = toGemtext("[a](https://a.example) then [b](https://b.example)");
+  assert.equal(
+    out,
+    "a then b\n=> https://a.example a\n=> https://b.example b\n"
+  );
+});
+
+test("does not flatten a nested list item's own marker", () => {
+  // Gemtext has no concept of nested lists; every marker just becomes a
+  // top-level "* " line, in source order.
+  const out = toGemtext("- parent\n  - nested");
+  assert.equal(out, "* parent\n* nested\n");
+});
+
+test("passes non-ASCII text through unchanged", () => {
+  const out = toGemtext("emoji 🎉 unicode ☃ text");
+  assert.equal(out, "emoji 🎉 unicode ☃ text\n");
+});
+
+test("a heading with no text after the hashes does not throw", () => {
+  assert.equal(toGemtext("# "), "# \n");
+});
