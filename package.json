@@ -1,6 +1,6 @@
 {
   "name": "eleventy-plugin-gopher-gemini",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Eleventy plugin for publishing a site as a Gopher hole and/or Gemini capsule alongside the web, with per-page control over which protocols each page ships to.",
   "type": "module",
   "main": "index.js",

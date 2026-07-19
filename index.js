@@ -2,26 +2,36 @@ import { hasOutput, filterByOutput, ALL_PROTOCOLS } from "./lib/outputs.js";
 import { toGemtext } from "./lib/gemtext.js";
 import { toGopherText } from "./lib/gopher-text.js";
 import { gopherItemType } from "./lib/item-type.js";
+import { convertShortcodes, defaultShortcodes } from "./lib/shortcodes.js";
 
 export default function gopherGeminiPlugin(eleventyConfig, options = {}) {
   const config = {
     maxLineWidth: 70,
     host: "",
     port: "70",
+    // Also accepted: `imageSrcRewrite` (maps {% image %} repo paths to served
+    // paths) and `shortcodes` (extends/overrides the built-in image/youtube
+    // tag handling) -- see lib/shortcodes.js.
     ...options,
   };
+
+  // Nunjucks shortcode tags in page.rawInput are rewritten to Markdown links
+  // (or stripped, if unrecognized) before conversion, so raw {% ... %}
+  // syntax never reaches Gopher/Gemini output.
+  const shortcodeMap = { ...defaultShortcodes(config), ...(config.shortcodes || {}) };
+  const preprocess = (markdown) => convertShortcodes(markdown, shortcodeMap);
 
   // {{ post | hasOutput("gopher") }}
   eleventyConfig.addFilter("hasOutput", hasOutput);
 
   // {{ content | gemtext | safe }}
-  eleventyConfig.addFilter("gemtext", (markdown) => toGemtext(markdown));
+  eleventyConfig.addFilter("gemtext", (markdown) => toGemtext(preprocess(markdown)));
 
   // {{ content | gopherText | safe }}  -- plain wrapped body only
-  eleventyConfig.addFilter("gopherText", (markdown) => toGopherText(markdown, config).body);
+  eleventyConfig.addFilter("gopherText", (markdown) => toGopherText(preprocess(markdown), config).body);
 
   // {{ content | gopherLinks }}  -- [{ url, label }, ...] extracted from the content
-  eleventyConfig.addFilter("gopherLinks", (markdown) => toGopherText(markdown, config).links);
+  eleventyConfig.addFilter("gopherLinks", (markdown) => toGopherText(preprocess(markdown), config).links);
 
   // {{ "/images/keroppi.gif" | gopherItemType }} -> "g"
   eleventyConfig.addFilter("gopherItemType", gopherItemType);
@@ -47,4 +57,4 @@ export default function gopherGeminiPlugin(eleventyConfig, options = {}) {
   });
 }
 
-export { hasOutput, filterByOutput, ALL_PROTOCOLS, toGemtext, toGopherText, gopherItemType };
+export { hasOutput, filterByOutput, ALL_PROTOCOLS, toGemtext, toGopherText, gopherItemType, convertShortcodes, defaultShortcodes };

@@ -43,6 +43,29 @@ test("gopher post output is plain wrapped text, not leaked HTML", async () => {
   assert.match(text, /Links:\n {2}\[1\] link - https:\/\/example\.com/);
 });
 
+test("web output renders the site's own image/youtube shortcodes as HTML", async () => {
+  const pages = await build();
+  assert.match(pages["/blog/hello/"], /<img src="\/images\/frog\.jpg" alt="a hopping frog">/);
+  assert.match(pages["/blog/hello/"], /youtube\.com\/embed\/dQw4w9WgXcQ/);
+});
+
+test("gemini output converts shortcode tags to link lines, never raw {% %} syntax", async () => {
+  const pages = await build();
+  const gmi = pages["/gemini/blog/hello/index.gmi"];
+  assert.doesNotMatch(gmi, /\{%/, "raw shortcode tag leaked into Gemtext output");
+  assert.match(gmi, /=> \/images\/frog\.jpg a hopping frog/);
+  assert.match(gmi, /=> https:\/\/www\.youtube\.com\/watch\?v=dQw4w9WgXcQ YouTube video/);
+});
+
+test("gopher output converts shortcode tags to citations, never raw {% %} syntax", async () => {
+  const pages = await build();
+  const text = pages["/gopher/blog/hello/text"];
+  assert.doesNotMatch(text, /\{%/, "raw shortcode tag leaked into Gopher text output");
+  assert.match(text, /a hopping frog \[\d\]/);
+  assert.match(text, /\[\d\] a hopping frog - \/images\/frog\.jpg/);
+  assert.match(text, /\[\d\] YouTube video - https:\/\/www\.youtube\.com\/watch\?v=dQw4w9WgXcQ/);
+});
+
 test("gophermap emits a conformant selector line using the plugin's configured host/port", async () => {
   const pages = await build();
   const map = pages["/gopher/gophermap"].trim();
