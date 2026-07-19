@@ -129,6 +129,14 @@ eleventyConfig.addPlugin(gopherGemini, {
 
 ## Example templates
 
+> **Build paths from `page.fileSlug`, not `post.url`.** A site that honors
+> `outputs` on the web side disables the web page for a gopher/gemini-only
+> post by setting `permalink: false` — which makes `post.url` literally
+> `false`, so a permalink like `/gemini{{ post.url }}index.gmi` collapses
+> into garbage (`/geminifalseindex.gmi`) for exactly the posts this plugin
+> exists to support. `{{ post.page.fileSlug }}` is stable no matter which
+> protocols a post ships to, and produces the same path for ordinary posts.
+
 A Gemini capsule page per post (`src/gemini/blog.njk`, using Eleventy's
 pagination over the `geminiPosts` collection):
 
@@ -138,7 +146,7 @@ pagination:
   data: collections.geminiPosts
   size: 1
   alias: post
-permalink: "/gemini{{ post.url }}index.gmi"
+permalink: "/gemini/blog/{{ post.page.fileSlug }}/index.gmi"
 eleventyExcludeFromCollections: true
 ---
 # {{ post.data.title }}
@@ -156,14 +164,17 @@ pagination:
   data: collections.gopherPosts
   size: 1
   alias: post
-permalink: "/gopher{{ post.url }}text"
+permalink: "/gopher/blog/{{ post.page.fileSlug }}/text"
 eleventyExcludeFromCollections: true
 eleventyAllowMissingExtension: true
 ---
 {{ post.rawInput | gopherText | safe }}
 ```
 
-A gophermap listing posts (`src/gopher/gophermap.njk`):
+A gophermap listing posts (`src/gopher/gophermap.njk`). The selectors point
+at the Gopher text pages above, *relative to the Gopher root* — if you serve
+`_site/gopher/` as the root of the hole, `/gopher/blog/foo/text` on disk is
+selector `/blog/foo/text`:
 
 ```njk
 ---
@@ -171,9 +182,9 @@ permalink: "/gopher/gophermap"
 eleventyExcludeFromCollections: true
 eleventyAllowMissingExtension: true
 ---
-{% for post in collections.gopherPosts %}
-{% gopherLink post.data.title, post.url %}
-{% endfor %}
+{% for post in collections.gopherPosts -%}
+{% gopherLink post.data.title, "/blog/" + post.page.fileSlug + "/text" %}
+{% endfor -%}
 ```
 
 ## Images

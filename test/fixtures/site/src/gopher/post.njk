@@ -3,7 +3,7 @@ pagination:
   data: collections.gopherPosts
   size: 1
   alias: post
-permalink: "/gopher{{ post.url }}text"
+permalink: "/gopher/blog/{{ post.page.fileSlug }}/text"
 eleventyExcludeFromCollections: true
 eleventyAllowMissingExtension: true
 ---

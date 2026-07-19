@@ -4,5 +4,5 @@ eleventyExcludeFromCollections: true
 eleventyAllowMissingExtension: true
 ---
 {% for post in collections.gopherPosts %}
-{% gopherLink post.data.title, post.url %}
+{% gopherLink post.data.title, "/blog/" + post.page.fileSlug + "/text" %}
 {% endfor %}

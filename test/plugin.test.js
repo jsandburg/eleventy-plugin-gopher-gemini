@@ -68,12 +68,29 @@ test("gopher output converts shortcode tags to citations, never raw {% %} syntax
 
 test("gophermap emits a conformant selector line using the plugin's configured host/port", async () => {
   const pages = await build();
-  const map = pages["/gopher/gophermap"].trim();
-  const [type, rest] = [map[0], map.slice(1)];
+  const line = pages["/gopher/gophermap"]
+    .split("\n")
+    .find((l) => l.includes("Hello World"));
+  assert.ok(line, "Hello World gophermap line missing");
+  const [type, rest] = [line[0], line.slice(1)];
   const [description, selector, host, port] = rest.split("\t");
-  assert.equal(type, "1");
+  assert.equal(type, "0");
   assert.equal(description, "Hello World");
-  assert.equal(selector, "/blog/hello/");
+  assert.equal(selector, "/blog/hello/text");
   assert.equal(host, "gopher.example.com");
   assert.equal(port, "70");
+});
+
+test("a gopher-only post with permalink: false still gets correct gopher output", async () => {
+  const pages = await build();
+  // No web page and no gemini page...
+  assert.equal(pages["/blog/gopher-only/"], undefined, "web page should not exist");
+  assert.equal(pages["/gemini/blog/gopher-only/index.gmi"], undefined, "gemini page should not exist");
+  // ...but the gopher text page lands at its fileSlug path, and the
+  // gophermap selector is built from the slug -- post.url is `false` for
+  // this post, so a url-based path would collapse into "/gopherfalsetext".
+  assert.ok(pages["/gopher/blog/gopher-only/text"], "gopher text page missing");
+  const map = pages["/gopher/gophermap"];
+  assert.match(map, /0Gopher Only Note\t\/blog\/gopher-only\/text\tgopher\.example\.com\t70/);
+  assert.doesNotMatch(map, /false/, "a post.url of `false` leaked into a gophermap selector");
 });
