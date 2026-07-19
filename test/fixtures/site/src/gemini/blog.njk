@@ -3,7 +3,7 @@ pagination:
   data: collections.geminiPosts
   size: 1
   alias: post
-permalink: "/gemini{{ post.url }}index.gmi"
+permalink: "/gemini/blog/{{ post.page.fileSlug }}/index.gmi"
 eleventyExcludeFromCollections: true
 ---
 # {{ post.data.title }}
