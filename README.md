@@ -92,6 +92,41 @@ you'd rather not repeat the filter inline.
 > 3.0) — never `templateContent` or `content`, which are already
 > Eleventy's own compiled HTML output and will not parse as Markdown.
 
+## Shortcode tags in post markdown
+
+Because `page.rawInput` is the raw source, Nunjucks shortcode tags a site
+uses inside post markdown (`markdownTemplateEngine: "njk"`) are never
+evaluated on the Gopher/Gemini path. Neither protocol can embed media, but
+both link to it natively, so before conversion the `gemtext`, `gopherText`,
+and `gopherLinks` filters rewrite known media tags to plain Markdown links —
+which then get the same link-line treatment as a hand-written `![alt](url)`:
+
+- `{% image "src/images/blog/frog.jpg", "a frog" %}` → `![a frog](/images/blog/frog.jpg)`
+  → `=> /images/blog/frog.jpg a frog` in Gemtext, an `[n]` citation in Gopher text
+- `{% youtube "dQw4w9WgXcQ" %}` → a `[YouTube video](https://www.youtube.com/watch?v=dQw4w9WgXcQ)` web link
+
+Unrecognized `{% ... %}` tags are **stripped**, so raw template syntax never
+reaches a reader. Tags inside fenced code blocks pass through verbatim, so a
+post *about* shortcodes can still show them.
+
+Two plugin options control this:
+
+```js
+eleventyConfig.addPlugin(gopherGemini, {
+  // Maps {% image %}'s repo path to the served path. Default strips a
+  // leading "src/" ("src/images/foo.jpg" -> "/images/foo.jpg"), matching
+  // the usual addPassthroughCopy("src/images") layout.
+  imageSrcRewrite: (src) => src.replace(/^src\//, "/"),
+
+  // Extend (or override) tag handling: name -> (args) => replacement
+  // Markdown, where args is the parsed argument list. Return null to strip.
+  shortcodes: {
+    stamp: ([name]) => `![stamp](/stamps/${name}.png)`,
+    youtube: () => null, // e.g. drop videos from text protocols entirely
+  },
+});
+```
+
 ## Example templates
 
 A Gemini capsule page per post (`src/gemini/blog.njk`, using Eleventy's
