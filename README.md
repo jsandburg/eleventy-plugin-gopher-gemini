@@ -75,6 +75,39 @@ eleventyConfig.addCollection("geminiPosts", (api) =>
 Or call the exported `filterByOutput(items, protocol)` helper directly if
 you'd rather not repeat the filter inline.
 
+### Disabling the web page
+
+Collections only control the Gopher/Gemini side. For a post that excludes
+`web` to also get no web page, compute its permalink in the posts folder's
+directory data file, using the exported `hasOutput` helper:
+
+```js
+// src/blog/blog.11tydata.js
+import { hasOutput } from "eleventy-plugin-gopher-gemini";
+
+export default {
+  eleventyComputed: {
+    // Only apply to markdown posts — see warning below.
+    permalink: (data) =>
+      data.page.inputPath.endsWith(".md")
+        ? hasOutput(data, "web")
+          ? `/blog/${data.page.fileSlug}/`
+          : false
+        : "/blog/",
+  },
+};
+```
+
+> **Warning: guard against non-post templates.** A directory data file
+> applies to *every* template in the folder — including an archive page
+> like `src/blog/index.njk` — and computed data overrides a template's own
+> front-matter permalink. Without the `.md` guard above, an index page's
+> permalink becomes `/blog/<its fileSlug>/`, i.e. `/blog/blog/`, leaving
+> nothing at `/blog/` (and, behind a `/blog → /blog/` trailing-slash
+> redirect rule, an infinite redirect loop). Adjust the guard's fallback
+> (`"/blog/"`) if your folder holds anything other than posts and a single
+> index page.
+
 ## Filters and shortcodes
 
 | Name | Kind | Description |
