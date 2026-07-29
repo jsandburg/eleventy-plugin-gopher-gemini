@@ -245,6 +245,92 @@ client fetches it (and displays or downloads it) as a separate request:
 There's no thumbnailing, resizing, or inline rendering — that's a limitation
 of the protocols themselves, not this plugin.
 
+## Serving and deploying
+
+The build puts everything under one output directory:
+
+```
+_site/
+├── blog/…            ← web site (serve _site/ over HTTP as usual)
+├── gopher/
+│   ├── gophermap
+│   └── blog/<slug>/text
+└── gemini/
+    └── blog/<slug>/index.gmi
+```
+
+The web part can go anywhere static HTML goes (GitHub Pages, Netlify, …),
+but **Gopher and Gemini are their own protocols on their own ports (70 and
+1965)** — no static-site host speaks them, so those two trees have to be
+copied to a machine you control that runs a Gopher and/or Gemini server.
+
+### Gopher
+
+Configure any Gopher server with `_site/gopher/` (or wherever you copy it,
+e.g. `/srv/gopher`) as its document root, and your hostname — the hostname
+**must match the `host` option you gave the plugin**, since that's what the
+`gopherLink` shortcode writes into every menu line. Most Gopher servers
+look for a file named `gophermap` in a directory and serve it as that
+directory's menu, which is exactly what the example gophermap template
+emits at the root.
+
+### Gemini
+
+Configure any Gemini server with `_site/gemini/` (e.g. `/srv/gemini`) as
+its content root, your hostname, and a TLS certificate — a self-signed one
+is normal in Gemini (clients use trust-on-first-use), and many servers can
+generate their own. Gemini servers conventionally serve `index.gmi` when a
+directory is requested, which is why the example template's permalink ends
+in `/index.gmi`.
+
+### Deploying with GitHub Actions
+
+A workflow that builds the site and rsyncs the two trees to your server
+over SSH (`.github/workflows/deploy.yml`):
+
+```yaml
+name: Deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npx @11ty/eleventy
+      - name: Set up SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+      - name: Rsync gopher and gemini trees
+        run: |
+          rsync -az --delete _site/gopher/ deploy@example.com:/srv/gopher/
+          rsync -az --delete _site/gemini/ deploy@example.com:/srv/gemini/
+```
+
+Things to replace with your own values:
+
+- `deploy@example.com` — the SSH user and host of your server (twice).
+- `/srv/gopher/` and `/srv/gemini/` — the root directories your Gopher and
+  Gemini servers are configured to serve (see above).
+- Two repository secrets (**Settings → Secrets and variables → Actions**):
+  `DEPLOY_KEY`, a private SSH key whose public half is in the deploy user's
+  `~/.ssh/authorized_keys` on the server, and `KNOWN_HOSTS`, the output of
+  `ssh-keyscan example.com` (so the job isn't prompted to trust the host).
+- If your web site deploys elsewhere (e.g. GitHub Pages), keep that workflow
+  as-is and add this one alongside it; if the web site lives on the same
+  server, add a third rsync line for the rest of `_site/`.
+
+`--delete` makes the server mirror the build exactly, so posts you remove
+(or switch off via `outputs`) disappear from the hole/capsule too.
+
 ## Development
 
 ```bash
