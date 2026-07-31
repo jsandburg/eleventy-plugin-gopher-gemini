@@ -22,7 +22,7 @@ Pin a released tag rather than tracking `main`, so a future breaking change
 doesn't silently break your build:
 
 ```bash
-npm install github:jsandburg/eleventy-plugin-gopher-gemini#v0.2.0
+npm install github:jsandburg/eleventy-plugin-gopher-gemini#v0.3.0
 ```
 
 ```js
