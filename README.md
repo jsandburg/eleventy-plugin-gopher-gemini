@@ -5,12 +5,13 @@ Publish an [Eleventy](https://www.11ty.dev/) site as a web site *and* a
 [Gemini](https://geminiprotocol.net/) capsule, from the same source content —
 with per-page control over which of the three a given page ships to.
 
-This is an Eleventy-native alternative to
-[Hugo-2-Gopher-and-Gemini](https://github.com/mkamarin/Hugo-2-Gopher-and-Gemini):
-instead of running Hugo, then post-processing its HTML output with a Python
-script, this plugin adds filters/shortcodes you use directly in your own
-Eleventy templates and collections, so Gopher/Gemini output is generated in
-the same build as everything else.
+Inspired by
+[Hugo-2-Gopher-and-Gemini](https://github.com/mkamarin/Hugo-2-Gopher-and-Gemini),
+but built differently: rather than
+post-processing the generated HTML with a separate script after the build,
+this plugin adds filters/shortcodes you use directly in your own Eleventy
+templates and collections, so Gopher/Gemini output is generated in the same
+build as everything else.
 
 ## Install
 
