@@ -287,7 +287,8 @@ in `/index.gmi`.
 ### Deploying with GitHub Actions
 
 A workflow that builds the site and rsyncs the two trees to your server
-over SSH (`.github/workflows/deploy.yml`):
+over SSH. This file goes in **your site's repository** (as
+`.github/workflows/deploy.yml`), not the plugin's:
 
 ```yaml
 name: Deploy
