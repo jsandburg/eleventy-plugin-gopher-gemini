@@ -94,3 +94,19 @@ test("surrounding prose and markdown links are untouched", () => {
     "Intro with a link.\n=> https://example.com link\n\n=> https://www.youtube.com/watch?v=abc YouTube video\n\nOutro.\n"
   );
 });
+
+test("brackets and line breaks in {% image %} alt text cannot break the link", () => {
+  const out = convertShortcodes('{% image "src/a.jpg", "Frog [cute]\nand small" %}', defaults);
+  assert.equal(out, "![Frog cute and small](/a.jpg)");
+});
+
+test("URL-encodes the {% youtube %} id", () => {
+  const out = convertShortcodes('{% youtube "abc&x=1 y" %}', defaults);
+  assert.equal(out, "[YouTube video](https://www.youtube.com/watch?v=abc%26x%3D1%20y)");
+});
+
+test("stays fast on a long run of unclosed tags", () => {
+  const start = performance.now();
+  convertShortcodes("{% a ".repeat(100000), defaults);
+  assert.ok(performance.now() - start < 2000, "quadratic-time tag matching");
+});

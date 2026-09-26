@@ -4,17 +4,37 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Weekly, so a new Eleventy release that breaks the plugin is caught even
+  # when nothing here changes (there's no lockfile pinning it).
+  schedule:
+    - cron: "0 12 * * 1"
+
+permissions:
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x, 24.x]
+        node-version: [18.x, 20.x, 22.x, 24.x, 26.x]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm install
+      - run: npm test
+
+  # The peerDependency (>=3.0.0) admits the next Eleventy major, so test
+  # against its prerelease to see breakage before users do.
+  eleventy-next:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.x
+      - run: npm install
+      - run: npm install --no-save @11ty/eleventy@canary
       - run: npm test

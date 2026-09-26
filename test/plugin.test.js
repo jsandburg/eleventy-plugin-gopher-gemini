@@ -94,3 +94,8 @@ test("a gopher-only post with permalink: false still gets correct gopher output"
   assert.match(map, /0Gopher Only Note\t\/blog\/gopher-only\/text\tgopher\.example\.com\t70/);
   assert.doesNotMatch(map, /false/, "a post.url of `false` leaked into a gophermap selector");
 });
+
+test("gemini output does not HTML-escape a title with & or < in it", async () => {
+  const pages = await build();
+  assert.match(pages["/gemini/blog/q-and-a/index.gmi"], /^# Q&A <Tips>\n/);
+});

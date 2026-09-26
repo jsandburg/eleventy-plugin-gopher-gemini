@@ -22,7 +22,7 @@ Pin a released tag rather than tracking `main`, so a future breaking change
 doesn't silently break your build:
 
 ```bash
-npm install github:jsandburg/eleventy-plugin-gopher-gemini#v0.3.0
+npm install github:jsandburg/eleventy-plugin-gopher-gemini#v0.3.1
 ```
 
 ```js
@@ -60,21 +60,20 @@ outputs: [gopher]
 A bare string (`outputs: gopher`) is treated the same as a one-element list
 (`outputs: [gopher]`).
 
-Use the `hasOutput` filter to build protocol-specific collections in your
-`eleventy.config.js`:
+Use the exported `filterByOutput(items, protocol)` helper to build
+protocol-specific collections in your `eleventy.config.js`:
 
 ```js
+import gopherGemini, { filterByOutput } from "eleventy-plugin-gopher-gemini";
+
 eleventyConfig.addCollection("gopherPosts", (api) =>
-  api.getFilteredByGlob("src/blog/*.md").filter((item) => item.data.outputs ? item.data.outputs.includes("gopher") : true)
+  filterByOutput(api.getFilteredByGlob("src/blog/*.md"), "gopher")
 );
 
 eleventyConfig.addCollection("geminiPosts", (api) =>
-  api.getFilteredByGlob("src/blog/*.md").filter((item) => item.data.outputs ? item.data.outputs.includes("gemini") : true)
+  filterByOutput(api.getFilteredByGlob("src/blog/*.md"), "gemini")
 );
 ```
-
-Or call the exported `filterByOutput(items, protocol)` helper directly if
-you'd rather not repeat the filter inline.
 
 ### Disabling the web page
 
@@ -171,6 +170,10 @@ eleventyConfig.addPlugin(gopherGemini, {
 > exists to support. `{{ post.page.fileSlug }}` is stable no matter which
 > protocols a post ships to, and produces the same path for ordinary posts.
 
+> **Mark front-matter values `| safe`.** Eleventy's Nunjucks HTML-escapes
+> `{{ ... }}` output, which is right for web pages but wrong for Gemtext and
+> Gopher text: a title like `Q&A` would otherwise reach readers as `Q&amp;A`.
+
 A Gemini capsule page per post (`src/gemini/blog.njk`, using Eleventy's
 pagination over the `geminiPosts` collection):
 
@@ -183,7 +186,7 @@ pagination:
 permalink: "/gemini/blog/{{ post.page.fileSlug }}/index.gmi"
 eleventyExcludeFromCollections: true
 ---
-# {{ post.data.title }}
+# {{ post.data.title | safe }}
 
 {{ post.rawInput | gemtext | safe }}
 ```
@@ -295,22 +298,26 @@ name: Deploy
 on:
   push:
     branches: [main]
+permissions:
+  contents: read
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
       - run: npm ci
       - run: npx @11ty/eleventy
       - name: Set up SSH
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.KNOWN_HOSTS }}
         run: |
           install -m 700 -d ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          echo "${{ secrets.KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          (umask 077 && printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519)
+          printf '%s\n' "$KNOWN_HOSTS" >> ~/.ssh/known_hosts
       - name: Rsync gopher and gemini trees
         run: |
           rsync -az --delete _site/gopher/ deploy@example.com:/srv/gopher/

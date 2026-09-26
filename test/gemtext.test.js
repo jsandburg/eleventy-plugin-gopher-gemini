@@ -128,3 +128,21 @@ test("passes a hand-authored Gemtext link line through verbatim", () => {
 test("left-trims an indented code fence so clients recognize the toggle", () => {
   assert.equal(toGemtext("  ```\ncode\n  ```"), "```\ncode\n```\n");
 });
+
+test("strips inline markup from a link's label on its link line too", () => {
+  assert.equal(
+    toGemtext("See [**bold** link](https://x.example) ok"),
+    "See bold link ok\n=> https://x.example bold link\n"
+  );
+});
+
+test("drops a Markdown link title and unwraps an <angle-bracket> destination", () => {
+  assert.equal(toGemtext('[x](https://x.example "Title")'), "=> https://x.example x\n");
+  assert.equal(toGemtext("[x](<https://x.example/a b>)"), "=> https://x.example/a%20b x\n");
+});
+
+test("stays fast on a long line of unmatched brackets", () => {
+  const start = performance.now();
+  toGemtext("[".repeat(200000));
+  assert.ok(performance.now() - start < 2000, "quadratic-time link matching");
+});

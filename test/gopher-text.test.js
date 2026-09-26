@@ -118,3 +118,9 @@ test("does not extract a link written inside an inline code span", () => {
   assert.equal(links.length, 0);
   assert.equal(body, "run curl [x](http://a) now\n");
 });
+
+test("strips inline markup from a link's label in the link list too", () => {
+  const { body, links } = toGopherText("See [**bold** link](https://x.example) ok");
+  assert.equal(body, "See bold link [1] ok\n\nLinks:\n  [1] bold link - https://x.example\n");
+  assert.deepEqual(links, [{ url: "https://x.example", label: "bold link" }]);
+});

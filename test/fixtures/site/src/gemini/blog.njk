@@ -6,6 +6,6 @@ pagination:
 permalink: "/gemini/blog/{{ post.page.fileSlug }}/index.gmi"
 eleventyExcludeFromCollections: true
 ---
-# {{ post.data.title }}
+# {{ post.data.title | safe }}
 
 {{ post.rawInput | gemtext | safe }}

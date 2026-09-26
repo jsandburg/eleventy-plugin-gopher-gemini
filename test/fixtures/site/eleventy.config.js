@@ -1,4 +1,4 @@
-import gopherGemini from "../../../index.js";
+import gopherGemini, { filterByOutput } from "../../../index.js";
 
 export default function (eleventyConfig) {
   eleventyConfig.addPlugin(gopherGemini, {
@@ -18,14 +18,10 @@ export default function (eleventyConfig) {
   );
 
   eleventyConfig.addCollection("geminiPosts", (api) =>
-    api.getFilteredByGlob("test/fixtures/site/src/blog/*.md").filter((item) =>
-      item.data.outputs ? item.data.outputs.includes("gemini") : true
-    )
+    filterByOutput(api.getFilteredByGlob("test/fixtures/site/src/blog/*.md"), "gemini")
   );
   eleventyConfig.addCollection("gopherPosts", (api) =>
-    api.getFilteredByGlob("test/fixtures/site/src/blog/*.md").filter((item) =>
-      item.data.outputs ? item.data.outputs.includes("gopher") : true
-    )
+    filterByOutput(api.getFilteredByGlob("test/fixtures/site/src/blog/*.md"), "gopher")
   );
 
   return {
