@@ -39,3 +39,10 @@ test("maps web URLs to the h web-link type", () => {
   assert.equal(gopherItemType("http://example.com/page.html"), "h");
   assert.equal(gopherItemType("URL:https://example.com/"), "h");
 });
+
+test("takes the item type from a gopher:// URL's path", () => {
+  assert.equal(gopherItemType("gopher://other.host/0/notes.txt"), "0");
+  assert.equal(gopherItemType("gopher://other.host/9/file"), "9");
+  assert.equal(gopherItemType("gopher://other.host/"), "1");
+  assert.equal(gopherItemType("gopher://other.host"), "1");
+});

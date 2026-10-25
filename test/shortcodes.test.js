@@ -62,3 +62,34 @@ test("gemLink strips newlines so a label cannot inject extra Gemtext lines", () 
     "=> /about.gmi About => gemini://evil.example x"
   );
 });
+
+test("gopherLink treats an explicitly undefined host/port option as unset", (t) => {
+  t.mock.method(console, "warn", () => {});
+  const { gopherLink } = loadShortcodes({ host: undefined, port: undefined });
+  const line = gopherLink("About", "/about");
+  assert.ok(!line.includes("undefined"), line);
+  assert.equal(line, "0About\t/about\t\t70");
+});
+
+test("gopherLink warns once when no host is configured", (t) => {
+  const warn = t.mock.method(console, "warn", () => {});
+  const { gopherLink } = loadShortcodes();
+  gopherLink("A", "/a");
+  gopherLink("B", "/b");
+  assert.equal(warn.mock.callCount(), 1);
+  assert.match(warn.mock.calls[0].arguments[0], /host/);
+});
+
+test("gopherLink splits a gopher:// URL into type, selector, host and port", () => {
+  const { gopherLink } = loadShortcodes(OPTIONS);
+  assert.equal(
+    gopherLink("Other hole", "gopher://other.host:7070/0/docs/a%20b.txt"),
+    "0Other hole\t/docs/a b.txt\tother.host\t7070"
+  );
+  assert.equal(gopherLink("Root", "gopher://other.host"), "1Root\t\tother.host\t70");
+});
+
+test("gemLink percent-encodes spaces in the URI so the label is not split off", () => {
+  const { gemLink } = loadShortcodes();
+  assert.equal(gemLink("/my page.gmi", "My page"), "=> /my%20page.gmi My page");
+});

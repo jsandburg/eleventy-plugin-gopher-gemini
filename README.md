@@ -58,7 +58,9 @@ outputs: [gopher]
 ```
 
 A bare string (`outputs: gopher`) is treated the same as a one-element list
-(`outputs: [gopher]`).
+(`outputs: [gopher]`). Any other kind of value (a number, an object) is
+treated as a mistake and the page ships to no protocol, so it can't leak to
+one you meant to exclude.
 
 Use the exported `filterByOutput(items, protocol)` helper to build
 protocol-specific collections in your `eleventy.config.js`:
@@ -117,8 +119,8 @@ export default {
 | `gopherText` | filter | Converts a Markdown string to plain, word-wrapped Gopher body text; links become `[n]` citations with a numbered list at the end |
 | `gopherLinks` | filter | Returns the `[{ url, label }]` array extracted from a Markdown string, for building gophermap menu lines separately from the body |
 | `gopherItemType` | filter | `{{ "/images/keroppi.gif" \| gopherItemType }}` → `g`/`I`/`9`/`h`/`1`/`0`, the Gopher item-type code for a path |
-| `gopherLink` | shortcode | `{% gopherLink "About", "/about" %}` — one gophermap menu line, item type auto-detected from the selector; an `http(s)://` selector becomes a type-`h` `URL:` web link; host/port default to the plugin's configured `host`/`port` options and can be overridden with `{% gopherLink "About", "/about", "other.host", "70" %}`. Tabs and newlines in any argument are collapsed to spaces so a title can't corrupt the menu |
-| `gemLink` | shortcode | `{% gemLink "/about.gmi", "About" %}` — one Gemtext link line |
+| `gopherLink` | shortcode | `{% gopherLink "About", "/about" %}` — one gophermap menu line, item type auto-detected from the selector; an `http(s)://` selector becomes a type-`h` `URL:` web link; a `gopher://` URL is split into its own type, selector, host and port; host/port default to the plugin's configured `host`/`port` options and can be overridden with `{% gopherLink "About", "/about", "other.host", "70" %}`. Tabs and newlines in any argument are collapsed to spaces so a title can't corrupt the menu. Logs a one-time warning if no `host` is configured |
+| `gemLink` | shortcode | `{% gemLink "/about.gmi", "About" %}` — one Gemtext link line; spaces in the URI are percent-encoded |
 
 > **Important:** `gemtext` and `gopherText` parse **Markdown**, not HTML. Pass
 > them the page's raw Markdown source (`page.rawInput`, added in Eleventy
@@ -139,7 +141,11 @@ which then get the same link-line treatment as a hand-written `![alt](url)`:
 - `{% youtube "dQw4w9WgXcQ" %}` → a `[YouTube video](https://www.youtube.com/watch?v=dQw4w9WgXcQ)` web link
 
 Unrecognized `{% ... %}` tags are **stripped**, so raw template syntax never
-reaches a reader. Tags inside fenced code blocks pass through verbatim, so a
+reaches a reader. `{{ ... }}` expressions are stripped too, since there's no
+data to evaluate them against. Comments — Nunjucks `{# ... #}` and Liquid
+`{% comment %}...{% endcomment %}` — are removed **with their contents**, so
+private notes stay as hidden as they are on the web. Template syntax inside
+fenced code blocks or inline `` `code` `` spans passes through verbatim, so a
 post *about* shortcodes can still show them.
 
 Two plugin options control this:
@@ -304,8 +310,8 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       - run: npm ci
