@@ -110,3 +110,39 @@ test("stays fast on a long run of unclosed tags", () => {
   convertShortcodes("{% a ".repeat(100000), defaults);
   assert.ok(performance.now() - start < 2000, "quadratic-time tag matching");
 });
+
+test("strips Nunjucks {# comments #} including their contents", () => {
+  const out = convertShortcodes("Hi {# private draft note #} there\n{#\nmulti\nline\n#}\nend", defaults);
+  assert.ok(!out.includes("private") && !out.includes("multi"), `comment leaked: ${out}`);
+  assert.match(out, /Hi\s+there/);
+  assert.match(out, /end/);
+});
+
+test("strips Liquid {% comment %} blocks including their contents", () => {
+  const out = convertShortcodes("a {% comment %}secret{% endcomment %} b", defaults);
+  assert.equal(out, "a  b");
+});
+
+test("strips {{ expressions }} so raw template output syntax never leaks", () => {
+  assert.equal(convertShortcodes("Site: {{ site.title }}!", defaults), "Site: !");
+});
+
+test("tags named after built-in object methods are stripped, not called", () => {
+  for (const name of ["constructor", "toString", "hasOwnProperty", "valueOf", "isPrototypeOf"]) {
+    assert.equal(convertShortcodes(`a {% ${name} "x" %} b`, defaults), "a  b", name);
+  }
+});
+
+test("leaves template syntax inside inline code spans verbatim", () => {
+  const src = 'Use `{% youtube "abc" %}` or `{{ title }}`, not {% youtube "abc" %}.';
+  assert.equal(
+    convertShortcodes(src, defaults),
+    'Use `{% youtube "abc" %}` or `{{ title }}`, not [YouTube video](https://www.youtube.com/watch?v=abc).'
+  );
+});
+
+test("stays fast on an unclosed tag followed by a long word", () => {
+  const start = performance.now();
+  convertShortcodes("{% " + "a".repeat(100000), defaults);
+  assert.ok(performance.now() - start < 2000, "quadratic-time tag-name matching");
+});

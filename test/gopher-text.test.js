@@ -35,9 +35,9 @@ test("passes fenced code block contents through without the fence markers", () =
   assert.equal(body, "const x = 1;\n");
 });
 
-test("keeps the list-item indent on every wrapped continuation line", () => {
+test("indents wrapped list-item continuation lines without repeating the bullet", () => {
   const { body } = toGopherText("- a rather long list item text here", { maxLineWidth: 20 });
-  assert.equal(body, "  * a rather long\n  * list item text\n  * here\n");
+  assert.equal(body, "  * a rather long\n    list item text\n    here\n");
   for (const line of body.trim().split("\n")) {
     assert.ok(line.length <= 20, `line "${line}" exceeds width 20`);
   }
@@ -123,4 +123,9 @@ test("strips inline markup from a link's label in the link list too", () => {
   const { body, links } = toGopherText("See [**bold** link](https://x.example) ok");
   assert.equal(body, "See bold link [1] ok\n\nLinks:\n  [1] bold link - https://x.example\n");
   assert.deepEqual(links, [{ url: "https://x.example", label: "bold link" }]);
+});
+
+test("wraps a long heading so no line exceeds maxLineWidth", () => {
+  const { body } = toGopherText("# a heading that is far too long", { maxLineWidth: 20 });
+  assert.equal(body, "A HEADING THAT IS\nFAR TOO LONG\n-----------------\n");
 });

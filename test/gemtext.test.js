@@ -146,3 +146,14 @@ test("stays fast on a long line of unmatched brackets", () => {
   toGemtext("[".repeat(200000));
   assert.ok(performance.now() - start < 2000, "quadratic-time link matching");
 });
+
+test("a paragraph line starting with # is not turned into a Gemtext heading", () => {
+  assert.equal(toGemtext("#hashtag at the start"), " #hashtag at the start\n");
+  assert.equal(toGemtext("**#1** fan"), " #1 fan\n");
+});
+
+test("stays fast on a link destination with a long run of spaces", () => {
+  const start = performance.now();
+  toGemtext("[a](x" + " ".repeat(100000) + "y)");
+  assert.ok(performance.now() - start < 2000, "quadratic-time link title matching");
+});

@@ -37,7 +37,7 @@ test("hasOutput treats a bare string outputs value as a one-protocol list", () =
   assert.equal(hasOutput({ data: { outputs: "gopher" } }, "gemini"), false);
 });
 
-test("hasOutput fails open (defaults to true) when outputs is neither a string nor an array", () => {
-  assert.equal(hasOutput({ data: { outputs: 42 } }, "gopher"), true);
-  assert.equal(hasOutput({ data: { outputs: { web: true } } }, "gemini"), true);
+test("hasOutput fails closed on an outputs value that is neither a list nor a string", () => {
+  assert.equal(hasOutput({ outputs: { gopher: false } }, "gopher"), false);
+  assert.equal(hasOutput({ data: { outputs: 1 } }, "web"), false);
 });
