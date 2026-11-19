@@ -37,7 +37,7 @@ test("passes blockquotes through with a stripped inline link", () => {
 
 test("converts list items to Gemtext list lines", () => {
   const out = toGemtext("- one\n- two\n1. three");
-  assert.equal(out, "* one\n* two\n* three\n");
+  assert.equal(out, "* one\n* two\n1. three\n");
 });
 
 test("passes preformatted code blocks through unchanged", () => {
@@ -74,7 +74,7 @@ test("does not hang or throw on an unclosed code fence", () => {
 });
 
 test("normalizes CRLF line endings", () => {
-  assert.equal(toGemtext("one\r\ntwo\r\n"), "one\ntwo\n");
+  assert.equal(toGemtext("one\r\n\r\ntwo\r\n"), "one\n\ntwo\n");
 });
 
 test("handles multiple links on the same line, in order", () => {
@@ -156,4 +156,73 @@ test("stays fast on a link destination with a long run of spaces", () => {
   const start = performance.now();
   toGemtext("[a](x" + " ".repeat(100000) + "y)");
   assert.ok(performance.now() - start < 2000, "quadratic-time link title matching");
+});
+
+test("joins the hard-wrapped lines of a paragraph into one Gemtext line", () => {
+  assert.equal(toGemtext("line one\nline two\n\nnext"), "line one line two\n\nnext\n");
+});
+
+test("keeps a Markdown hard line break (two trailing spaces or a backslash)", () => {
+  assert.equal(toGemtext("roses are red  \nviolets are blue\\\nthe end"), "roses are red\nviolets are blue\nthe end\n");
+});
+
+test("treats a bare carriage return as a line break, not part of the line", () => {
+  assert.equal(toGemtext("one\r\rtwo"), "one\n\ntwo\n");
+  assert.doesNotMatch(toGemtext("text\r=> gemini://x.example y"), /\r/);
+});
+
+test("a linked image keeps the outer link and uses the alt text as its label", () => {
+  assert.equal(toGemtext("[![alt](img.png)](https://x.example)"), "=> https://x.example alt\n");
+  assert.equal(toGemtext("see [![alt](img.png)](https://x.example) here"), "see alt here\n=> https://x.example alt\n");
+});
+
+test("handles brackets in a link label and two levels of parentheses in a URL", () => {
+  assert.equal(toGemtext("[a [b] c](https://u.example)"), "=> https://u.example a [b] c\n");
+  assert.equal(toGemtext("[a](http://x/(a(b)c))"), "=> http://x/(a(b)c) a\n");
+});
+
+test("leaves spaced-out asterisks and URLs in running text alone", () => {
+  assert.equal(toGemtext("2 * 3 * 4 = 24"), "2 * 3 * 4 = 24\n");
+  assert.equal(toGemtext("see https://e.example/_a_/ and *this*"), "see https://e.example/_a_/ and this\n");
+});
+
+test("resolves reference-style links and drops their definitions", () => {
+  const out = toGemtext("See [the docs][d], [Home][] and [home].\n\n[d]: https://d.example \"Docs\"\n[home]: https://h.example");
+  assert.equal(
+    out,
+    "See the docs, Home and home.\n=> https://d.example the docs\n=> https://h.example Home\n=> https://h.example home\n"
+  );
+  assert.equal(toGemtext("an [undefined] ref"), "an [undefined] ref\n");
+});
+
+test("converts autolinks and HTML links, and drops other inline HTML", () => {
+  assert.equal(toGemtext("<https://a.example>"), "=> https://a.example\n");
+  assert.equal(toGemtext("mail <me@example.com> now"), "mail mailto:me@example.com now\n=> mailto:me@example.com\n");
+  assert.equal(
+    toGemtext('a <a href="https://b.example">link</a> and <b>bold</b><!-- gone -->'),
+    "a link and bold\n=> https://b.example link\n"
+  );
+  assert.equal(toGemtext('<img src="/a b.png" alt="pic">'), "pic\n=> /a%20b.png pic\n");
+});
+
+test("converts setext headings and thematic breaks", () => {
+  assert.equal(toGemtext("Title\n=====\n\nSub\n---\n\ntext\n\n* * *"), "# Title\n\n## Sub\n\ntext\n\n---\n");
+});
+
+test("wraps table rows in a preformatted block", () => {
+  assert.equal(toGemtext("| a | b |\n|---|---|\n| 1 | 2 |\n\nafter"), "```\n| a | b |\n|---|---|\n| 1 | 2 |\n```\n\nafter\n");
+});
+
+test("recognizes ~~~ fences, and does not take an inline ```code``` span for one", () => {
+  assert.equal(toGemtext("~~~\n# not a heading\n~~~"), "```\n# not a heading\n```\n");
+  assert.equal(toGemtext("```inline``` text\n\n# Heading"), "inline text\n\n# Heading\n");
+});
+
+test("emits a standalone link after the links of the text before it", () => {
+  assert.equal(toGemtext("See [foo](a) here\n[bar](b)"), "See foo here\n=> a foo\n=> b bar\n");
+});
+
+test("treats null or undefined input as empty", () => {
+  assert.equal(toGemtext(null), "\n");
+  assert.equal(toGemtext(undefined), "\n");
 });

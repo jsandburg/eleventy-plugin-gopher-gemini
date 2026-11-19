@@ -146,3 +146,37 @@ test("stays fast on an unclosed tag followed by a long word", () => {
   convertShortcodes("{% " + "a".repeat(100000), defaults);
   assert.ok(performance.now() - start < 2000, "quadratic-time tag-name matching");
 });
+
+test("removes a {#id} heading attribute without swallowing text up to a later #}", () => {
+  assert.equal(convertShortcodes("## A {#one}\n\nkeep this\n\nuse C#} here", {}), "## A \n\nkeep this\n\nuse C#} here");
+});
+
+test("a stray {{ does not swallow text past the paragraph", () => {
+  assert.equal(convertShortcodes("a {{ b\n\nc }} d", {}), "a {{ b\n\nc }} d");
+});
+
+test("keeps the contents of a {% raw %} block verbatim", () => {
+  assert.equal(convertShortcodes("{% raw %}{{ x }} {% y %}{% endraw %}", {}), "{{ x }} {% y %}");
+});
+
+test("accepts keyword arguments for the built-in shortcodes", () => {
+  assert.equal(convertShortcodes('{% image alt="a frog", src="src/img/frog.jpg" %}', defaults), "![a frog](/img/frog.jpg)");
+  assert.equal(
+    convertShortcodes('{% youtube id="abc" %}', defaults),
+    "[YouTube video](https://www.youtube.com/watch?v=abc)"
+  );
+});
+
+test("leaves template syntax inside a ~~~ fence untouched", () => {
+  assert.equal(convertShortcodes("~~~\n{% x %}\n~~~", {}), "~~~\n{% x %}\n~~~");
+});
+
+test("treats null input as empty", () => {
+  assert.equal(convertShortcodes(null, {}), "");
+});
+
+test("unclosed comment openers are scanned in linear time", () => {
+  const start = performance.now();
+  convertShortcodes("{# ".repeat(200000) + "{% comment %} ".repeat(200000), {});
+  assert.ok(performance.now() - start < 2000);
+});

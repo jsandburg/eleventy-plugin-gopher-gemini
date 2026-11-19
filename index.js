@@ -42,7 +42,7 @@ export default function gopherGeminiPlugin(eleventyConfig, options = {}) {
   // Gophermap fields are tab-delimited and both formats are line-based, so
   // a tab or newline inside a shortcode argument (e.g. a post title) would
   // corrupt the menu line or inject extra lines; collapse them to spaces.
-  const sanitize = (value) => String(value).replace(/[\t\r\n]+/g, " ");
+  const sanitize = (value) => String(value ?? "").replace(/[\t\r\n]+/g, " ");
 
   let warnedNoHost = false;
 
@@ -54,14 +54,16 @@ export default function gopherGeminiPlugin(eleventyConfig, options = {}) {
     host ??= config.host;
     port ??= config.port;
     // A gopher:// URL (RFC 4266) already names its own host, port, item
-    // type and selector, so split those out instead of using it as a selector
-    const gopherUrl = target.match(/^gopher:\/\/([^/:]*)(?::(\d+))?(?:\/.(.*))?$/i);
+    // type and selector, so split those out instead of using it as a selector.
+    // The type and selector are optional ("gopher://host/"), and an IPv6
+    // host is bracketed.
+    const gopherUrl = target.match(/^gopher:\/\/(\[[^\]]*\]|[^/:]*)(?::(\d+))?(?:\/(?:.(.*))?)?$/i);
     if (gopherUrl) {
-      host = gopherUrl[1];
+      host = gopherUrl[1].replace(/^\[|\]$/g, "");
       port = gopherUrl[2] || "70";
       target = sanitize(decodeSelector(gopherUrl[3] ?? ""));
     } else if (type === "h" && !/^URL:/i.test(target)) {
-      // Web links use the conventional "hURL:<url>" selector form
+      // Links off Gopher use the conventional "hURL:<url>" selector form
       target = `URL:${target}`;
     }
     if (!host && !warnedNoHost) {
@@ -78,6 +80,8 @@ export default function gopherGeminiPlugin(eleventyConfig, options = {}) {
     // A space would end the URI early, so it's percent-encoded like the
     // link URLs the gemtext filter emits
     const cleanUri = sanitize(uri).trim().replace(/\s/g, "%20");
+    // A link line with no URI would make clients read the label as the URI
+    if (!cleanUri) return "";
     return `=> ${cleanUri}${label ? " " + sanitize(label) : ""}`;
   });
 }

@@ -93,3 +93,21 @@ test("gemLink percent-encodes spaces in the URI so the label is not split off", 
   const { gemLink } = loadShortcodes();
   assert.equal(gemLink("/my page.gmi", "My page"), "=> /my%20page.gmi My page");
 });
+
+test("gopherLink parses a gopher:// URL with a bare trailing slash or an IPv6 host", () => {
+  const { gopherLink } = loadShortcodes(OPTIONS);
+  assert.equal(gopherLink("Root", "gopher://example.org/"), "1Root\t\texample.org\t70");
+  assert.equal(gopherLink("v6", "gopher://[::1]:7070/1/x"), "1v6\t/x\t::1\t7070");
+});
+
+test("gopherLink emits non-HTTP URLs as type-h URL: links", () => {
+  const { gopherLink } = loadShortcodes(OPTIONS);
+  assert.equal(gopherLink("Mail", "mailto:a@b.example"), "hMail\tURL:mailto:a@b.example\tgopher.example.com\t70");
+  assert.equal(gopherLink("Gem", "gemini://example.org/"), "hGem\tURL:gemini://example.org/\tgopher.example.com\t70");
+});
+
+test("a missing description or URI is empty rather than the text 'undefined'", () => {
+  const { gopherLink, gemLink } = loadShortcodes(OPTIONS);
+  assert.equal(gopherLink(undefined, "/x"), "0\t/x\tgopher.example.com\t70");
+  assert.equal(gemLink(undefined, "Label"), "");
+});
