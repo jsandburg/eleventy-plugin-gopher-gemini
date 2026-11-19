@@ -66,7 +66,7 @@ test("a heading does not throw on a negative maxLineWidth (String.repeat needs a
 });
 
 test("normalizes CRLF line endings", () => {
-  assert.equal(toGopherText("one\r\ntwo\r\n").body, "one\ntwo\n");
+  assert.equal(toGopherText("one\r\n\r\ntwo\r\n").body, "one\n\ntwo\n");
 });
 
 test("numbers multiple links across a document in order, not per line", () => {
@@ -105,7 +105,8 @@ test("hard-breaks a word longer than maxLineWidth so no line exceeds it", () => 
 });
 
 test("pads a lone '.' line so it cannot be taken for the type-0 terminator", () => {
-  assert.equal(toGopherText("before\n.\nafter").body, "before\n. \nafter\n");
+  assert.equal(toGopherText("before\n\n.\n\nafter").body, "before\n\n. \n\nafter\n");
+  assert.equal(toGopherText("```\n.\n```").body, ". \n");
 });
 
 test("strips underscore emphasis but leaves snake_case identifiers alone", () => {
@@ -128,4 +129,45 @@ test("strips inline markup from a link's label in the link list too", () => {
 test("wraps a long heading so no line exceeds maxLineWidth", () => {
   const { body } = toGopherText("# a heading that is far too long", { maxLineWidth: 20 });
   assert.equal(body, "A HEADING THAT IS\nFAR TOO LONG\n-----------------\n");
+});
+
+test("re-wraps a hard-wrapped paragraph as one block", () => {
+  const { body } = toGopherText("aaaa bbbb cccc\ndddd eeee\nffff", { maxLineWidth: 20 });
+  assert.equal(body, "aaaa bbbb cccc dddd\neeee ffff\n");
+});
+
+test("keeps the numbers of an ordered list", () => {
+  assert.equal(toGopherText("1. one\n2. two\n- three").body, "  1. one\n  2. two\n  * three\n");
+});
+
+test("wraps long Links entries at word boundaries without breaking the URL", () => {
+  const url = "https://example.com/a/really/long/url/that/goes/past/the/width";
+  const { body } = toGopherText(`[a fairly long label for this link](${url})`, { maxLineWidth: 40 });
+  assert.ok(body.includes(`\n      ${url}\n`), body);
+});
+
+test("lists an autolink once instead of as 'url - url'", () => {
+  assert.equal(
+    toGopherText("<https://a.example>").body,
+    "https://a.example [1]\n\nLinks:\n  [1] https://a.example\n"
+  );
+});
+
+test("a linked image yields one link, to the outer target", () => {
+  const { links } = toGopherText("[![alt](img.png)](https://x.example)");
+  assert.deepEqual(links, [{ url: "https://x.example", label: "alt" }]);
+});
+
+test("renders setext headings, thematic breaks and tables", () => {
+  assert.equal(toGopherText("Title\n=====", { maxLineWidth: 10 }).body, "TITLE\n-----\n");
+  assert.equal(toGopherText("a\n\n---\n\nb", { maxLineWidth: 10 }).body, "a\n\n----------\n\nb\n");
+  assert.equal(toGopherText("| a | b |\n|---|---|\n| 1 | 2 |").body, "| a | b |\n|---|---|\n| 1 | 2 |\n");
+});
+
+test("recognizes ~~~ fences", () => {
+  assert.equal(toGopherText("~~~\n# code\n~~~").body, "# code\n");
+});
+
+test("treats null input as empty", () => {
+  assert.equal(toGopherText(null).body, "\n");
 });

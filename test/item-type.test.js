@@ -14,7 +14,24 @@ test("maps image extensions to their Gopher item-type codes", () => {
 
 test("maps other known binary extensions to type 9", () => {
   assert.equal(gopherItemType("/files/archive.zip"), "9");
-  assert.equal(gopherItemType("/files/song.mp3"), "9");
+  assert.equal(gopherItemType("/files/clip.mp4"), "9");
+});
+
+test("maps audio to sound type s and SVG to image type I", () => {
+  assert.equal(gopherItemType("/files/song.mp3"), "s");
+  assert.equal(gopherItemType("/files/take.WAV"), "s");
+  assert.equal(gopherItemType("/img/logo.svg"), "I");
+});
+
+test("treats any non-Gopher URL as a type-h link, not a local selector", () => {
+  assert.equal(gopherItemType("mailto:me@example.com"), "h");
+  assert.equal(gopherItemType("gemini://example.org/"), "h");
+  assert.equal(gopherItemType("ftp://example.org/file.zip"), "h");
+});
+
+test("reads the root menu type from a gopher:// URL with a bare trailing slash or IPv6 host", () => {
+  assert.equal(gopherItemType("gopher://example.org/"), "1");
+  assert.equal(gopherItemType("gopher://[::1]:70/0/notes.txt"), "0");
 });
 
 test("defaults to text type 0 for unknown or missing extensions", () => {

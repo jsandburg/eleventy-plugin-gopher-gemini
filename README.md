@@ -115,17 +115,36 @@ export default {
 | Name | Kind | Description |
 |---|---|---|
 | `hasOutput` | filter | `{{ post \| hasOutput("gopher") }}` — true if the page's `outputs` list includes the protocol (or has no `outputs` field at all) |
-| `gemtext` | filter | Converts a Markdown string to Gemtext: headings/blockquotes pass through, inline formatting is unwrapped, inline links become trailing `=> url label` lines. A line consisting of only a Markdown link becomes a bare `=> url label` line in place, and a hand-authored `=>` line passes through verbatim (note that raw `=>` lines appear as literal text in your web/Gopher output) |
-| `gopherText` | filter | Converts a Markdown string to plain, word-wrapped Gopher body text; links become `[n]` citations with a numbered list at the end |
+| `gemtext` | filter | Converts a Markdown string to Gemtext: headings/blockquotes pass through, inline formatting is unwrapped, inline links become trailing `=> url label` lines, and the lines of a paragraph are joined into one (Gemtext clients wrap text themselves). A line consisting of only a Markdown link becomes a bare `=> url label` line in place, and a hand-authored `=>` line passes through verbatim (note that raw `=>` lines appear as literal text in your web/Gopher output) |
+| `gopherText` | filter | Converts a Markdown string to plain, word-wrapped Gopher body text; each paragraph is re-wrapped as a whole, and links become `[n]` citations with a numbered list at the end. Code blocks, table rows and the URLs in the link list are never broken, so those lines can run past `maxLineWidth` |
 | `gopherLinks` | filter | Returns the `[{ url, label }]` array extracted from a Markdown string, for building gophermap menu lines separately from the body |
-| `gopherItemType` | filter | `{{ "/images/keroppi.gif" \| gopherItemType }}` → `g`/`I`/`9`/`h`/`1`/`0`, the Gopher item-type code for a path |
-| `gopherLink` | shortcode | `{% gopherLink "About", "/about" %}` — one gophermap menu line, item type auto-detected from the selector; an `http(s)://` selector becomes a type-`h` `URL:` web link; a `gopher://` URL is split into its own type, selector, host and port; host/port default to the plugin's configured `host`/`port` options and can be overridden with `{% gopherLink "About", "/about", "other.host", "70" %}`. Tabs and newlines in any argument are collapsed to spaces so a title can't corrupt the menu. Logs a one-time warning if no `host` is configured |
-| `gemLink` | shortcode | `{% gemLink "/about.gmi", "About" %}` — one Gemtext link line; spaces in the URI are percent-encoded |
+| `gopherItemType` | filter | `{{ "/images/keroppi.gif" \| gopherItemType }}` → `g`/`I`/`s`/`9`/`h`/`1`/`0`, the Gopher item-type code for a path |
+| `gopherLink` | shortcode | `{% gopherLink "About", "/about" %}` — one gophermap menu line, item type auto-detected from the selector; an `http(s)://` selector — or any other non-Gopher URL, such as `gemini://…` or `mailto:…` — becomes a type-`h` `URL:` link; a `gopher://` URL is split into its own type, selector, host and port; host/port default to the plugin's configured `host`/`port` options and can be overridden with `{% gopherLink "About", "/about", "other.host", "70" %}`. Tabs and newlines in any argument are collapsed to spaces so a title can't corrupt the menu. Logs a one-time warning if no `host` is configured |
+| `gemLink` | shortcode | `{% gemLink "/about.gmi", "About" %}` — one Gemtext link line; spaces in the URI are percent-encoded; with no URI it emits nothing |
 
 > **Important:** `gemtext` and `gopherText` parse **Markdown**, not HTML. Pass
 > them the page's raw Markdown source (`page.rawInput`, added in Eleventy
 > 3.0) — never `templateContent` or `content`, which are already
 > Eleventy's own compiled HTML output and will not parse as Markdown.
+
+### Markdown coverage
+
+The converters are line-based, not a full CommonMark parser. They handle:
+
+- ATX (`#`) and setext (`===` / `---` underline) headings, blockquotes,
+  thematic breaks, and bulleted and numbered lists (numbers are kept)
+- fenced code blocks (```` ``` ```` or `~~~`), passed through preformatted
+- paragraphs, with hard-wrapped source lines joined; a Markdown hard break
+  (two trailing spaces or a trailing backslash) still starts a new line
+- inline links and images, reference-style links (`[text][ref]`),
+  `<https://autolinks>`, and HTML `<a href>` / `<img src>`
+- a linked image, `[![alt](img)](url)`, as a single link to the outer `url`
+  labelled with the alt text
+- tables, kept verbatim (inside a preformatted block in Gemtext)
+- other inline HTML tags and comments, which are dropped (their text stays)
+
+Not handled: nested list indentation, indented (4-space) code blocks, and
+footnotes, which come through as plain text.
 
 ## Shortcode tags in post markdown
 
@@ -145,8 +164,12 @@ reaches a reader. `{{ ... }}` expressions are stripped too, since there's no
 data to evaluate them against. Comments — Nunjucks `{# ... #}` and Liquid
 `{% comment %}...{% endcomment %}` — are removed **with their contents**, so
 private notes stay as hidden as they are on the web. Template syntax inside
-fenced code blocks or inline `` `code` `` spans passes through verbatim, so a
-post *about* shortcodes can still show them.
+fenced code blocks, inline `` `code` `` spans or a `{% raw %}` block passes
+through verbatim, so a post *about* shortcodes can still show them. A
+`{#id}` heading attribute is removed on its own.
+
+Keyword arguments work too: `{% image src="src/images/frog.jpg", alt="a frog" %}`.
+Custom builders find them on `args.named` (e.g. `args.named.src`).
 
 Two plugin options control this:
 
@@ -238,7 +261,8 @@ client fetches it (and displays or downloads it) as a separate request:
 
 - `gopherItemType` maps file extensions to the Gopher item-type codes clients
   use to decide how to handle the selector: `g` for GIF, `I` for other raster
-  images, `9` for other binary files, `h` for web URLs, `1` for directories,
+  images (and SVG), `s` for audio, `9` for other binary files, `h` for web and
+  other non-Gopher URLs, `1` for directories,
   `0` for plain text.
 - `gemtext` and `gopherText` both pull `![alt](path)` image references out of
   the running text and turn them into their own link line (`=> path alt` for
